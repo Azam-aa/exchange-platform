@@ -1,27 +1,65 @@
 package com.azam.exchange.common.exception;
 
+import com.azam.exchange.common.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(UserAlreadyExistsException.class)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationException(
+            MethodArgumentNotValidException ex) {
 
-    public ResponseEntity<String> handleUserAlreadyExistsException(
+        Map<String, String> errors = new HashMap<>();
 
-            UserAlreadyExistsException exception
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                errors.put(error.getField(), error.getDefaultMessage()));
 
-    ) {
+        ApiResponse<Map<String, String>> response =
+                ApiResponse.<Map<String, String>>builder()
+                        .success(false)
+                        .message("Validation Failed")
+                        .data(errors)
+                        .timestamp(LocalDateTime.now())
+                        .build();
 
-        return ResponseEntity
-
-                .status(HttpStatus.CONFLICT)
-
-                .body(exception.getMessage());
-
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Object>> handleUserAlreadyExistsException(
+            UserAlreadyExistsException ex) {
+
+        ApiResponse<Object> response =
+                ApiResponse.builder()
+                        .success(false)
+                        .message(ex.getMessage())
+                        .data(null)
+                        .timestamp(LocalDateTime.now())
+                        .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Object>> handleException(Exception ex) {
+
+        ApiResponse<Object> response =
+                ApiResponse.builder()
+                        .success(false)
+                        .message("Something went wrong")
+                        .data(null)
+                        .timestamp(LocalDateTime.now())
+                        .build();
+
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }
